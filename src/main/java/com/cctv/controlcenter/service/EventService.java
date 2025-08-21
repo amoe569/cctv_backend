@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -189,12 +190,22 @@ public class EventService {
     }
     
     public SseEmitter subscribeToEvents() {
-        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        SseEmitter emitter = new SseEmitter(0L); // 무한 타임아웃
         emitters.add(emitter);
         
         emitter.onCompletion(() -> emitters.remove(emitter));
         emitter.onTimeout(() -> emitters.remove(emitter));
         emitter.onError((ex) -> emitters.remove(emitter));
+        
+        // 즉시 연결 확인 메시지 전송
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("connected")
+                    .data("SSE 연결 성공"));
+        } catch (IOException e) {
+            log.warn("SSE 초기 연결 메시지 전송 실패", e);
+            emitters.remove(emitter);
+        }
         
         log.info("SSE 구독 추가: 현재 구독자 수 = {}", emitters.size());
         
@@ -215,5 +226,23 @@ public class EventService {
         });
         
         log.info("이벤트 브로드캐스트 완료: 구독자 수 = {}", emitters.size());
+    }
+    
+    // 10초마다 하트비트 전송으로 연결 유지
+    @Scheduled(fixedRate = 10000)
+    public void sendHeartbeat() {
+        if (!emitters.isEmpty()) {
+            emitters.removeIf(emitter -> {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("heartbeat")
+                            .data(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+                    return false;
+                } catch (IOException e) {
+                    log.debug("하트비트 전송 실패 - 연결 제거");
+                    return true;
+                }
+            });
+        }
     }
 }
