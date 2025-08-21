@@ -3,6 +3,7 @@ package com.cctv.controlcenter.domain;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,10 +18,12 @@ public class Event {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "camera_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Camera camera;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "video_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Video video;
     
     @Column(nullable = false)

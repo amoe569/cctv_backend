@@ -1,15 +1,21 @@
 spring:
-  application:
-    name: cctv-control-center
-  
   profiles:
     active: dev
+  jackson:
+    time-zone: Asia/Seoul
+
+---
+# 개발 환경 (H2 데이터베이스)
+spring:
+  config:
+    activate:
+      on-profile: dev
   
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
     username: sa
-    password: 
+    password:
   
   h2:
     console:
@@ -17,65 +23,85 @@ spring:
       path: /h2-console
   
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
     show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
     defer-datasource-initialization: true
   
   sql:
     init:
       mode: always
       data-locations: classpath:db/data.sql
-      continue-on-error: true
-      platform: h2
-  
-  security:
-    user:
-      name: admin
-      password: admin123
-      roles: ADMIN
-  
-  thymeleaf:
-    cache: false
-    mode: HTML
-  
-  web:
-    resources:
-      static-locations: classpath:/static/
-  
+
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      fail-on-empty-beans: false
+    properties:
+      hibernate:
+        enable_lazy_load_no_trans: true
+
 server:
   port: 8080
-  servlet:
-    context-path: /
-  
+
 logging:
   level:
     com.cctv.controlcenter: DEBUG
-    org.springframework.security: DEBUG
     org.springframework.web: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  
+
 ---
+# Docker/운영 환경 (PostgreSQL)
 spring:
   config:
     activate:
-      on-profile: prod
+      on-profile: docker
   
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/cctv_control}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/cctv_db}
+    username: ${SPRING_DATASOURCE_USERNAME:cctv_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:cctv_password}
     driver-class-name: org.postgresql.Driver
-    username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:password}
   
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: validate
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+  
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:db/data.sql
+      continue-on-error: true
+
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      fail-on-empty-beans: false
+    properties:
+      hibernate:
+        enable_lazy_load_no_trans: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.cctv.controlcenter: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

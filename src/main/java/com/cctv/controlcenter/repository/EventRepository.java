@@ -29,18 +29,14 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     @Query("SELECT e FROM Event e WHERE e.camera.id IN :cameraIds ORDER BY e.ts DESC")
     Page<Event> findByCameraIdsOrdered(@Param("cameraIds") List<String> cameraIds, Pageable pageable);
     
-    @Query("SELECT e FROM Event e WHERE " +
-           "(:cameraId IS NULL OR e.camera.id = :cameraId) AND " +
-           "(:eventType IS NULL OR e.type LIKE CONCAT('%', :eventType, '%')) AND " +
-           "(:startDate IS NULL OR e.ts >= :startDate) AND " +
-           "(:endDate IS NULL OR e.ts <= :endDate) AND " +
-           "e.severity >= :minSeverity " +
-           "ORDER BY e.ts DESC")
-    Page<Event> findEventsWithFilters(
-            @Param("cameraId") String cameraId,
-            @Param("eventType") String eventType,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate,
-            @Param("minSeverity") int minSeverity,
-            Pageable pageable);
+    // Spring Data JPA Method Query 사용 (타입 안전)
+    Page<Event> findByCameraIdAndSeverityGreaterThanEqualOrderByTsDesc(String cameraId, int severity, Pageable pageable);
+    
+    Page<Event> findBySeverityGreaterThanEqualOrderByTsDesc(int severity, Pageable pageable);
+    
+    Page<Event> findByCameraIdAndTypeAndSeverityGreaterThanEqualOrderByTsDesc(String cameraId, String type, int severity, Pageable pageable);
+    
+    Page<Event> findByTypeAndSeverityGreaterThanEqualOrderByTsDesc(String type, int severity, Pageable pageable);
+    
+    // 사용하지 않는 메서드 제거 (Spring Data JPA Method Query 사용)
 }

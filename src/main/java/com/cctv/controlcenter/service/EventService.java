@@ -162,7 +162,30 @@ public class EventService {
         log.info("이벤트 필터링 조회 - 카메라: {}, 타입: {}, 시작: {}, 종료: {}, 최소심각도: {}", 
                 cameraId, eventType, startDate, endDate, minSeverity);
         
-        return eventRepository.findEventsWithFilters(cameraId, eventType, startDate, endDate, minSeverity, pageable);
+        try {
+            // 필터 조건에 따라 적절한 메서드 선택
+            if (cameraId != null && !cameraId.isEmpty() && eventType != null && !eventType.isEmpty()) {
+                // 카메라 ID + 이벤트 타입 + 심각도
+                return eventRepository.findByCameraIdAndTypeAndSeverityGreaterThanEqualOrderByTsDesc(
+                        cameraId, eventType, minSeverity, pageable);
+            } else if (cameraId != null && !cameraId.isEmpty()) {
+                // 카메라 ID + 심각도만
+                return eventRepository.findByCameraIdAndSeverityGreaterThanEqualOrderByTsDesc(
+                        cameraId, minSeverity, pageable);
+            } else if (eventType != null && !eventType.isEmpty()) {
+                // 이벤트 타입 + 심각도만
+                return eventRepository.findByTypeAndSeverityGreaterThanEqualOrderByTsDesc(
+                        eventType, minSeverity, pageable);
+            } else {
+                // 심각도만
+                return eventRepository.findBySeverityGreaterThanEqualOrderByTsDesc(
+                        minSeverity, pageable);
+            }
+        } catch (Exception e) {
+            log.error("이벤트 필터링 조회 실패", e);
+            // 오류 발생 시 빈 페이지 반환
+            return Page.empty(pageable);
+        }
     }
     
     public SseEmitter subscribeToEvents() {
