@@ -55,6 +55,9 @@ public class Camera {
     @Column(name = "meta_json", columnDefinition = "TEXT")
     private String metaJson;
     
+    @Column(name = "yolo_enabled", nullable = false)
+    private Boolean yoloEnabled = false; // 기본값: YOLO 비활성화
+    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -105,6 +108,9 @@ public class Camera {
     
     public String getMetaJson() { return metaJson; }
     public void setMetaJson(String metaJson) { this.metaJson = metaJson; }
+    
+    public Boolean getYoloEnabled() { return yoloEnabled; }
+    public void setYoloEnabled(Boolean yoloEnabled) { this.yoloEnabled = yoloEnabled; }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

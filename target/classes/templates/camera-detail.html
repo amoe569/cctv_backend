@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${camera.name} + ' - CCTV AI 관제 시스템'">카메라 상세 - CCTV AI 관제 시스템</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .app-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .user-info {
+            float: right;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .back-link {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .back-link:hover {
+            opacity: 1;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #2d2d2d;
+            padding: 1rem;
+            border-right: 1px solid #444;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        
+        .sidebar-menu a:hover {
+            background-color: #444;
+        }
+        
+        .sidebar-menu a.active {
+            background-color: #667eea;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            overflow: hidden;
+        }
+        
+        .camera-header {
+            background-color: #2d2d2d;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .camera-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .camera-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .info-item {
+            background-color: #3d3d3d;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        
+        .info-label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            height: calc(100% - 200px);
+        }
+        
+        .video-container {
+            background-color: #2d2d2d;
+            border-radius: 12px;
+            padding: 1rem;
+            position: relative;
+        }
+        
+        .video-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .video-stream {
+            width: 100%;
+            height: calc(100% - 60px);
+            background-color: #000;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .video-stream img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .events-panel {
+            background-color: #2d2d2d;
+            border-radius: 12px;
+            padding: 1rem;
+            overflow: hidden;
+        }
+        
+        .events-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .events-list {
+            height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+        
+        .event-item {
+            background-color: #3d3d3d;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .event-type {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .event-time {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .event-details {
+            font-size: 0.9rem;
+        }
+        
+        .event-score {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        
+        .no-events {
+            text-align: center;
+            color: #888;
+            padding: 2rem;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-normal { background-color: #28a745; }
+        .status-alert { background-color: #dc3545; }
+        .status-fault { background-color: #ffc107; color: #000; }
+        
+        .error-message {
+            background-color: #dc3545;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="app-title">
+            <a href="/" class="back-link">←</a>
+            CCTV AI 관제 시스템
+        </div>
+        <div class="user-info" th:text="${userEmail}">admin@example.com</div>
+    </header>
+    
+    <div class="main-container">
+        <nav class="sidebar">
+            <ul class="sidebar-menu">
+                <li><a href="/">대시보드</a></li>
+                <li><a href="/cameras" class="active">실시간 모니터링</a></li>
+                <li><a href="/events">이벤트 관리</a></li>
+                <li><a href="/videos">저장 영상</a></li>
+                <li><a href="/settings">설정</a></li>
+            </ul>
+        </nav>
+        
+        <main class="content-area">
+            <!-- 에러 메시지 표시 -->
+            <div th:if="${error}" class="error-message" th:text="${error}">
+                카메라 정보를 찾을 수 없습니다
+            </div>
+            
+            <!-- 카메라 정보가 있을 때만 표시 -->
+            <div th:if="${camera}" class="camera-header">
+                <h1 class="camera-title" th:text="${camera.name}">카메라 이름</h1>
+                <div class="camera-info">
+                    <div class="info-item">
+                        <div class="info-label">상태</div>
+                        <div class="info-value">
+                            <span class="status-badge" 
+                                  th:classappend="'status-' + ${#strings.toLowerCase(camera.status)}"
+                                  th:text="${camera.status}">NORMAL</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">위치</div>
+                        <div class="info-value" th:text="${camera.lat + ', ' + camera.lng}">37.5665, 126.9780</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">RTSP URL</div>
+                        <div class="info-value" th:text="${camera.rtspUrl ?: 'N/A'}">RTSP URL</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">등록일</div>
+                        <div class="info-value" th:text="${#temporals.format(camera.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="main-content">
+                <div class="video-container">
+                    <h3 class="video-title">실시간 스트림</h3>
+                    <div class="video-stream">
+                        <img th:if="${camera}" 
+                             th:src="${camera.streamUrl}" 
+                             alt="실시간 스트림"
+                             crossorigin="anonymous"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display: none; flex-direction: column; align-items: center; color: #888;">
+                            <div style="font-size: 2rem; margin-bottom: 1rem;">📹</div>
+                            <div>스트림 연결 중...</div>
+                            <div style="font-size: 0.8rem; margin-top: 0.5rem;">Python Detector가 실행 중인지 확인하세요</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="events-panel">
+                    <h3 class="events-title">
+                        실시간 이벤트
+                        <span id="event-count">0</span>
+                    </h3>
+                    <div class="events-list" id="events-list">
+                        <div class="no-events">이벤트가 없습니다</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script th:inline="javascript">
+        // 카메라 ID 가져오기
+        const cameraId = /*[[${camera?.id}]]*/ null;
+        
+        if (cameraId) {
+            // SSE 연결
+            const eventSource = new EventSource('/api/events/stream');
+            const eventsList = document.getElementById('events-list');
+            const eventCount = document.getElementById('event-count');
+            let eventCounter = 0;
+            
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // 현재 카메라의 이벤트만 필터링
+                    if (data.camera && data.camera.id === cameraId) {
+                        addEventToList(data);
+                        eventCounter++;
+                        eventCount.textContent = eventCounter;
+                    }
+                } catch (e) {
+                    console.error('이벤트 파싱 오류:', e);
+                }
+            };
+            
+            eventSource.onerror = function(event) {
+                console.error('SSE 연결 오류:', event);
+                eventSource.close();
+            };
+            
+            function addEventToList(event) {
+                // 기존 "이벤트가 없습니다" 메시지 제거
+                const noEvents = eventsList.querySelector('.no-events');
+                if (noEvents) {
+                    noEvents.remove();
+                }
+                
+                const eventItem = document.createElement('div');
+                eventItem.className = 'event-item';
+                
+                const severity = event.severity || 1;
+                const severityText = ['', '낮음', '보통', '높음', '매우 높음', '치명적'][severity] || '알 수 없음';
+                
+                eventItem.innerHTML = `
+                    <div class="event-header">
+                        <span class="event-type">${event.type}</span>
+                        <span class="event-time">${new Date(event.ts).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="event-details">
+                        <div>심각도: <strong>${severityText}</strong></div>
+                        <div>점수: <span class="event-score">${(event.score * 100).toFixed(1)}%</span></div>
+                        ${event.bbox ? `<div>위치: (${event.bbox.x}, ${event.bbox.y}) ${event.bbox.w}×${event.bbox.h}</div>` : ''}
+                    </div>
+                `;
+                
+                // 최신 이벤트를 맨 위에 추가
+                eventsList.insertBefore(eventItem, eventsList.firstChild);
+                
+                // 이벤트 목록이 너무 길어지면 오래된 것 제거
+                const maxEvents = 50;
+                while (eventsList.children.length > maxEvents) {
+                    eventsList.removeChild(eventsList.lastChild);
+                }
+            }
+            
+            // 페이지 로드 시 기존 이벤트 로드
+            fetch(`/api/events?cameraId=${cameraId}`)
+                .then(response => response.json())
+                .then(events => {
+                    events.forEach(event => {
+                        addEventToList(event);
+                        eventCounter++;
+                    });
+                    eventCount.textContent = eventCounter;
+                })
+                .catch(error => {
+                    console.error('기존 이벤트 로드 실패:', error);
+                });
+        }
+    </script>
+</body>
+</html>

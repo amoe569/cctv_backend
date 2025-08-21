@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCTV AI 관제 시스템</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .app-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .user-info {
+            float: right;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #2d2d2d;
+            padding: 1rem;
+            border-right: 1px solid #444;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        
+        .sidebar-menu a:hover {
+            background-color: #444;
+        }
+        
+        .sidebar-menu a.active {
+            background-color: #667eea;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            overflow: hidden;
+        }
+        
+        .map-container {
+            background-color: #2d2d2d;
+            border-radius: 12px;
+            padding: 1rem;
+            height: 100%;
+            position: relative;
+        }
+        
+        #map {
+            height: 100%;
+            border-radius: 8px;
+            background-color: #1a1a1a;
+        }
+        
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0,0,0,0.8);
+            padding: 1rem;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-normal { background-color: #28a745; }
+        .status-alert { background-color: #dc3545; }
+        .status-fault { background-color: #ffc107; }
+        .status-maintenance { background-color: #17a2b8; }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .camera-count {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0,0,0,0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="app-title">CCTV AI 관제 시스템</div>
+        <div class="user-info" th:text="${userEmail}">admin@example.com</div>
+    </header>
+    
+    <div class="main-container">
+        <nav class="sidebar">
+            <ul class="sidebar-menu">
+                <li><a href="/" class="active">대시보드</a></li>
+                <li><a href="/cameras">실시간 모니터링</a></li>
+                <li><a href="/events">이벤트 관리</a></li>
+                <li><a href="/videos">저장 영상</a></li>
+                <li><a href="/settings">설정</a></li>
+            </ul>
+        </nav>
+        
+        <main class="content-area">
+            <div class="map-container">
+                <div class="camera-count">
+                    <strong th:text="${cameras.size()}">0</strong>개 카메라
+                </div>
+                
+                <div class="legend">
+                    <h4>카메라 상태</h4>
+                    <div class="legend-item">
+                        <div class="legend-color status-normal"></div>
+                        <span>정상 (ONLINE)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color status-alert pulse"></div>
+                        <span>오류 (ERROR)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color status-fault"></div>
+                        <span>오프라인 (OFFLINE)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color status-maintenance"></div>
+                        <span>점검 (MAINTENANCE)</span>
+                    </div>
+                </div>
+                
+                <div id="map"></div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script th:inline="javascript">
+        // 카메라 데이터를 JavaScript로 전달
+        const cameras = /*[[${cameras}]]*/ [];
+        
+        console.log('카메라 데이터:', cameras); // 디버깅용 로그
+        
+        // 지도 초기화 - 새로운 CCTV 위치(충청도 지역) 중심으로 설정
+        const map = L.map('map').setView([36.85, 127.15], 11); // 충청도 지역 중심
+        
+        // OpenStreetMap 타일 레이어 추가
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // 카메라 마커 추가
+        cameras.forEach(camera => {
+            const status = camera.status;
+            let iconColor, iconClass;
+            
+            switch(status) {
+                case 'ONLINE':
+                    iconColor = '#28a745';
+                    iconClass = 'status-normal';
+                    break;
+                case 'ERROR':
+                    iconColor = '#dc3545';
+                    iconClass = 'status-alert pulse';
+                    break;
+                case 'OFFLINE':
+                    iconColor = '#ffc107';
+                    iconClass = 'status-fault';
+                    break;
+                case 'MAINTENANCE':
+                    iconColor = '#17a2b8';
+                    iconClass = 'status-maintenance';
+                    break;
+                default:
+                    iconColor = '#6c757d';
+                    iconClass = '';
+            }
+            
+            // 커스텀 아이콘 생성
+            const customIcon = L.divIcon({
+                className: `camera-marker ${iconClass}`,
+                html: `<div style="
+                    width: 20px; 
+                    height: 20px; 
+                    background-color: ${iconColor}; 
+                    border: 2px solid white; 
+                    border-radius: 50%;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                "></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            
+            // 마커 생성 및 추가
+            const marker = L.marker([camera.lat, camera.lng], { icon: customIcon })
+                .addTo(map)
+                .bindPopup(`
+                    <div style="text-align: center;">
+                        <h4>${camera.name}</h4>
+                        <p><strong>상태:</strong> ${camera.status}</p>
+                        <p><strong>RTSP:</strong> ${camera.rtspUrl || 'N/A'}</p>
+                        <a href="/cameras/${camera.id}" class="btn btn-primary btn-sm">상세 보기</a>
+                    </div>
+                `);
+            
+            // 마커 클릭 시 상세 페이지로 이동
+            marker.on('click', function() {
+                window.location.href = `/cameras/${camera.id}`;
+            });
+        });
+        
+        // 카메라가 없을 경우 기본 위치에 메시지 표시
+        if (cameras.length === 0) {
+            const defaultMarker = L.marker([36.85, 127.15])
+                .addTo(map)
+                .bindPopup('등록된 카메라가 없습니다.<br/>새로운 카메라를 추가해주세요.');
+        }
+    </script>
+</body>
+</html>

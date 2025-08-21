@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스트림 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .stream-test {
+            margin: 20px 0;
+            padding: 20px;
+            background: #333;
+            border-radius: 10px;
+        }
+        .stream-test img {
+            max-width: 100%;
+            border: 2px solid #666;
+            border-radius: 5px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background: #28a745; }
+        .error { background: #dc3545; }
+        .info { background: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎥 스트림 테스트 페이지</h1>
+        
+        <div class="stream-test">
+            <h3>테스트 1: 직접 Python Detector 스트림</h3>
+            <div class="status info">Python Detector: http://localhost:5001/stream/cam-001</div>
+            <img src="http://localhost:5001/stream/cam-001" 
+                 alt="Python Detector Stream"
+                 onload="document.getElementById('status1').innerHTML='✅ 스트림 로드 성공'; document.getElementById('status1').className='status success';"
+                 onerror="document.getElementById('status1').innerHTML='❌ 스트림 로드 실패'; document.getElementById('status1').className='status error';">
+            <div id="status1" class="status info">🔄 스트림 로딩 중...</div>
+        </div>
+
+        <div class="stream-test">
+            <h3>테스트 2: 카메라 상세 페이지</h3>
+            <div class="status info">Spring Boot: http://localhost:8080/cameras/cam-001</div>
+            <iframe src="http://localhost:8080/cameras/cam-001" 
+                    width="100%" 
+                    height="400"
+                    onload="document.getElementById('status2').innerHTML='✅ 페이지 로드 성공'; document.getElementById('status2').className='status success';"
+                    onerror="document.getElementById('status2').innerHTML='❌ 페이지 로드 실패'; document.getElementById('status2').className='status error';">
+            </iframe>
+            <div id="status2" class="status info">🔄 페이지 로딩 중...</div>
+        </div>
+
+        <div class="stream-test">
+            <h3>테스트 3: API 상태 확인</h3>
+            <div id="api-status" class="status info">🔄 API 상태 확인 중...</div>
+            <button onclick="checkAPI()">API 상태 확인</button>
+        </div>
+    </div>
+
+    <script>
+        function checkAPI() {
+            const statusDiv = document.getElementById('api-status');
+            statusDiv.innerHTML = '🔄 API 확인 중...';
+            statusDiv.className = 'status info';
+
+            // Spring Boot API 확인
+            fetch('http://localhost:8080/api/cameras')
+                .then(response => response.json())
+                .then(data => {
+                    statusDiv.innerHTML = `✅ Spring Boot API 성공 (카메라 ${data.length}개)`;
+                    statusDiv.className = 'status success';
+                })
+                .catch(error => {
+                    statusDiv.innerHTML = `❌ Spring Boot API 실패: ${error.message}`;
+                    statusDiv.className = 'status error';
+                });
+        }
+
+        // 페이지 로드 시 API 상태 확인
+        window.onload = function() {
+            setTimeout(checkAPI, 1000);
+        };
+    </script>
+</body>
+</html>
